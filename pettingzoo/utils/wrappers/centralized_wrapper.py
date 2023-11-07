@@ -32,7 +32,7 @@ class CentralizedWrapper(gym.Env):
 
 	def reset(self):
 		observations, infos = self._env.reset()
-		return self._env.state(), infos
+		return self._env.state()
 
 	def step(self, action):
 		# Loop through each agent and assign action

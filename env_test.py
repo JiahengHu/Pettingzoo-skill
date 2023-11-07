@@ -10,7 +10,8 @@ parallel_env = simple_heterogenous_v3.parallel_env(
 
 parallel_env = CentralizedWrapper(parallel_env)
 
-observations, infos = parallel_env.reset()
+observations = parallel_env.reset()
+
 dones = False
 counter = 0
 while not dones:
