@@ -65,9 +65,20 @@ env = make_env(raw_env)
 parallel_env = parallel_wrapper_fn(env)
 
 
+class clipWorld(World):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def step(self):
+        super().step()
+        for agent in self.agents:
+            agent.state.p_pos = np.clip(
+                agent.state.p_pos, -1, 1
+            )  # clip position
+
 class Scenario(BaseScenario):
     def make_world(self, N=3):
-        world = World()
+        world = clipWorld()
         # set any world properties first
         world.dim_c = 2
         num_agents = N
