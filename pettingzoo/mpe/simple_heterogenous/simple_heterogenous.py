@@ -159,12 +159,13 @@ class Scenario(BaseScenario):
         return rew
 
     def get_state(self, world):
-        pos = []
-        vel = []
+        agent_stats = []
 
         for agt in world.agents:
-            vel.append(agt.state.p_vel)
-            pos.append(agt.state.p_pos)
+            agent_stats.append(agt.state.p_vel)
+            agent_stats.append(agt.state.p_pos)
+            # vel.append(agt.state.p_vel)
+            # pos.append(agt.state.p_pos)
 
         # get positions of all entities in this agent's reference frame
         entity_pos = []
@@ -175,7 +176,8 @@ class Scenario(BaseScenario):
         thresholds = [0.3, 0.6]
         for idx, lm in enumerate(world.landmarks):
             other_idx = (idx + 1) % len(world.landmarks)
-            ag_idx_list = [idx, other_idx] # We cam change the association here
+            # ag_idx_list = [idx, other_idx] # We cam change the association here
+            ag_idx_list = [idx]
 
             dists = [
                 np.sqrt(np.sum(np.square(world.agents[a_i].state.p_pos - lm.state.p_pos)))
@@ -189,7 +191,7 @@ class Scenario(BaseScenario):
             else:
                 diayn_states.append([0, 0, 1])
 
-        return np.concatenate(diayn_states + pos + vel + entity_pos)
+        return np.concatenate(diayn_states + agent_stats + entity_pos)
 
     def observation(self, agent, world):
         # communication of all other agents
