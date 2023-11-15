@@ -65,9 +65,20 @@ env = make_env(raw_env)
 parallel_env = parallel_wrapper_fn(env)
 
 
+class clipWorld(World):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def step(self):
+        super().step()
+        for agent in self.agents:
+            agent.state.p_pos = np.clip(
+                agent.state.p_pos, -1, 1
+            )  # clip position
+
 class Scenario(BaseScenario):
     def make_world(self, N=3):
-        world = World()
+        world = clipWorld()
         # set any world properties first
         world.dim_c = 2
         num_agents = N
@@ -80,7 +91,6 @@ class Scenario(BaseScenario):
             agent.collide = False
             agent.silent = True
             agent.size = 0.15
-            # Have agent of different types
 
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
@@ -94,19 +104,19 @@ class Scenario(BaseScenario):
     def reset_world(self, world, np_random):
         # random properties for agents
         for i, agent in enumerate(world.agents):
-            agent.color = np.array([0.35, 0.35, 0.85]) * i / len(world.landmarks)
+            agent.color = np.array([1, 0, 0]) * i / len(world.landmarks)
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
             # landmark.color = np.array([0.25, 0.25, 0.25])
-            landmark.color = np.array([1, 1, 1]) * i / len(world.landmarks)
-
-        # OK cool, now add type and observation, and we're done
+            landmark.color = np.array([0, 0, 1]) * i / len(world.landmarks)
 
         # set random initial states
         for agent in world.agents:
             agent.state.p_pos = np_random.uniform(-1, +1, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
+
+        # TODO: What if we want to fix the initial state?
         for i, landmark in enumerate(world.landmarks):
             landmark.state.p_pos = np_random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)

@@ -8,6 +8,7 @@ import gym
 from gym import spaces
 import numpy as np
 import gymnasium
+import torch
 
 class CentralizedWrapper(gym.Env):
 	def __init__(self, env):
@@ -44,6 +45,42 @@ class CentralizedWrapper(gym.Env):
 		done = terminations[self.agent_name] or truncations[self.agent_name]
 		rewards = rewards[self.agent_name]
 		return self._env.state(), rewards, done, infos
+
+	def render(self, mode='human'):
+		return self._env.render()
+
+
+	# THIS IS A HACK
+	def plot_prediction_net(self, agent, cfg, step=0, device="cuda", anti=False, SHOW=False):
+		assert agent.domain == "particle"
+		N = cfg.env.particle.N
+		# So we want to test: for each vector, what are the predicted skill
+		possible_vectors = [
+			[1, 0, 0],
+			[0, 1, 0],
+			[0, 0, 1],
+		]
+		prediction = []
+		for vec in possible_vectors:
+			with torch.no_grad():
+				test_obs = torch.tensor(vec*N, device=device, dtype=torch.float32)
+				if anti:
+					predicted_z = torch.softmax(agent.anti_diayn(None, torch.tensor(test_obs, device=device)).
+												reshape(cfg.agent.skill_channel, -1),
+												dim=-1)
+				else:
+					predicted_z = torch.softmax(agent.diayn(None, torch.tensor(test_obs, device=device)).
+												reshape(cfg.agent.skill_channel, -1),
+												dim=-1)
+			prediction.append(predicted_z.cpu().numpy())
+
+		apd = f"_step_{step}"
+		if anti:
+			apd += "_anti"
+
+		text = np.array2string(np.array(prediction), precision=2, suppress_small=True)
+		with open(f"pred{apd}.txt", "w") as text_file:
+			text_file.write(text)
 
 	def __getattr__(self, name):
 		return getattr(self._env, name)
