@@ -46,7 +46,7 @@ class raw_env(SimpleEnv, EzPickle):
         )
         self.metadata["name"] = "simple_heterogenous_v3"
 
-        state_dim = N * 9
+        state_dim = N * 7
         self.state_space = spaces.Box(
             low=-np.float32(np.inf),
             high=+np.float32(np.inf),
@@ -184,6 +184,7 @@ class Scenario(BaseScenario):
 
         diayn_states = []
         thresholds = [0.3, 0.6]
+        upper_threshold = 0.7
         for idx, lm in enumerate(world.landmarks):
             other_idx = (idx + 1) % len(world.landmarks)
             # ag_idx_list = [idx, other_idx] # We cam change the association here
@@ -193,15 +194,22 @@ class Scenario(BaseScenario):
                 np.sqrt(np.sum(np.square(world.agents[a_i].state.p_pos - lm.state.p_pos)))
                 for a_i in ag_idx_list
             ]
-            m_dist = min(dists)
-            if m_dist < thresholds[0]:
-                diayn_states.append([1, 0, 0])
-            elif m_dist < thresholds[1]:
-                diayn_states.append([0, 1, 0])
-            else:
-                diayn_states.append([0, 0, 1])
 
-        return np.concatenate(diayn_states + agent_stats + entity_pos)
+            # Cap the distance
+            dists += [upper_threshold]
+            m_dist = min(dists)
+
+            # # TODO: These are if we use discrete representations
+            # if m_dist < thresholds[0]:
+            #     diayn_states.append([1, 0, 0])
+            # elif m_dist < thresholds[1]:
+            #     diayn_states.append([0, 1, 0])
+            # else:
+            #     diayn_states.append([0, 0, 1])
+
+            diayn_states.append(m_dist)
+
+        return np.concatenate([diayn_states] + agent_stats + entity_pos)
 
     def observation(self, agent, world):
         # communication of all other agents
