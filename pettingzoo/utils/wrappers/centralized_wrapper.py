@@ -56,7 +56,7 @@ class CentralizedWrapper(gym.Env):
 		N = cfg.env.particle.N
 		# So we want to test: for each vector, what are the predicted skill
 		possible_vectors = [
-			[0.0],
+			[0.05],
 			[0.2],
 			[0.35],
 			[0.5],
