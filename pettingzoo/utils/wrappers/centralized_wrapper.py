@@ -31,8 +31,8 @@ class CentralizedWrapper(gym.Env):
 		self.agent_name = self._env.possible_agents[0]
 		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
 
-	def reset(self):
-		observations, infos = self._env.reset()
+	def reset(self, seed=None):
+		observations, infos = self._env.reset(seed)
 		return self._env.state()
 
 	def step(self, action):
