@@ -60,7 +60,9 @@ class CentralizedWrapper(gym.Env):
 			[0.2],
 			[0.35],
 			[0.5],
-			[0.7],
+			[0.65],
+			[0.8],
+			[0.95]
 		]
 		prediction = []
 		for vec in possible_vectors:

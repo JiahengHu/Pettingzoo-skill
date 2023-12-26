@@ -184,7 +184,8 @@ class Scenario(BaseScenario):
 
         diayn_states = []
         thresholds = [0.3, 0.6]
-        upper_threshold = 0.7
+        # upper_threshold = 0.7
+        upper_threshold = np.inf
         for idx, lm in enumerate(world.landmarks):
             other_idx = (idx + 1) % len(world.landmarks)
             ag_idx_list = [idx, other_idx] # We can change the association here
