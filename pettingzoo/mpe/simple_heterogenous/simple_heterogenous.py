@@ -188,8 +188,8 @@ class Scenario(BaseScenario):
         upper_threshold = np.inf
         for idx, lm in enumerate(world.landmarks):
             other_idx = (idx + 1) % len(world.landmarks)
-            ag_idx_list = [idx, other_idx] # We can change the association here
-            # ag_idx_list = [idx]
+            # ag_idx_list = [idx, other_idx] # We can change the association here
+            ag_idx_list = [idx]
 
             dists = [
                 np.sqrt(np.sum(np.square(world.agents[a_i].state.p_pos - lm.state.p_pos)))
