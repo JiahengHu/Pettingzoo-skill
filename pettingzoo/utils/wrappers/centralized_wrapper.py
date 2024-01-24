@@ -81,3 +81,83 @@ class CentralizedWrapper(gym.Env):
 
 	def __getattr__(self, name):
 		return getattr(self._env, name)
+
+class DownstreamCentralizedWrapper(CentralizedWrapper):
+	"""
+	Centralized wrapper that is responsible for downstream tasks
+	Takes in a list of landmark ids that are used to generate reward
+	"""
+	def __init__(self, env, landmark_id, N):
+		self._env = env
+		self.N = N
+		self.cycle_step = 50
+		self.distance_threshold = 0.6
+
+		dict_act_space = env.action_spaces
+		low_action_range = []
+		high_action_range = []
+
+		for val in dict_act_space.values():
+			assert isinstance(val, gymnasium.spaces.Box)
+			low_action_range.append(val.low)
+			high_action_range.append(val.high)
+		low_action_range = np.concatenate(low_action_range)
+		high_action_range = np.concatenate(high_action_range)
+
+		self.action_space = spaces.Box(
+			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
+
+		# TODO: change state space
+		# We want to have binary indicator for each episode / each timestep
+		# close or far from the landmark
+		self.landmark_id = landmark_id
+
+		state_dim = self.N * 8 + 1 # We have an additional indicator variable, plus time counter
+		self.observation_space = spaces.Box(
+			low=-np.float32(np.inf),
+			high=+np.float32(np.inf),
+			shape=(state_dim,),
+			dtype=np.float32,
+		)
+
+		self.agent_name = self._env.possible_agents[0]
+		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
+
+	def step(self, action):
+		self.step_count += 1.0
+		# Loop through each agent and assign action
+		# We assume each agent has the same action space
+		actions = np.split(action, len(self._env.agents))
+		actions = {agent:act  for agent, act in zip(self._env.agents, actions)}
+		observations, rewards, terminations, truncations, infos = self._env.step(actions)
+
+		done = terminations[self.agent_name] or truncations[self.agent_name]
+
+		state = self._env.state()
+		dist_list = state[:self.N]
+
+		reward = 0
+		for ids in self.landmark_id:
+			binary = self.binary_indicator[ids]
+			dist = dist_list[ids]
+			if binary == 0:
+				if dist < self.distance_threshold:
+					reward += 1
+			else:
+				if dist > self.distance_threshold:
+					reward += 1
+
+		if self.step_count % self.cycle_step == 0:
+			self.binary_indicator = np.random.randint(2, size=10)
+
+		return state, reward, done, infos
+
+	def reset(self, seed=None):
+		self._env.reset(seed)
+		self.step_count = 0.0
+		self.binary_indicator = np.random.randint(2, size=10)
+		return self._env.state()
+
+	# Defines additional states needed for the upper policy
+	def get_additional_states(self):
+		return np.concatenate([self.binary_indicator, [self.step_count / self.cycle_step]])
