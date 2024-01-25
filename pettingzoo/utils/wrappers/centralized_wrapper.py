@@ -87,9 +87,10 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	Centralized wrapper that is responsible for downstream tasks
 	Takes in a list of landmark ids that are used to generate reward
 	"""
-	def __init__(self, env, landmark_id, N):
+	def __init__(self, env, landmark_id, N, factorize):
 		self._env = env
 		self.N = N
+		self.factorize = factorize
 		self.distance_threshold = 0.6
 		# We want to have binary indicator for each episode / each timestep
 		# close or far from the landmark
@@ -154,20 +155,22 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 
 	def get_reward(self, state):
 		dist_list = state[:self.N]
-		reward = 0
-		for ids in self.landmark_id:
+		reward = np.zeros_like(self.landmark_id, dtype=np.float32)
+		for idx, ids in enumerate(self.landmark_id):
 			binary = self.binary_indicator[ids]
 			dist = dist_list[ids]
 			if binary == 0:
 				if dist < self.distance_threshold:
-					reward += 1
+					reward[idx] += 1
 				else:
-					reward -= 1
+					reward[idx] -= 1
 			else:
 				if dist > self.distance_threshold:
-					reward += 1
+					reward[idx] += 1
 				else:
-					reward -= 1
+					reward[idx] -= 1
+		if not self.factorize:
+			reward = np.sum(reward)
 		return reward
 
 	def ds_state_update(self):
