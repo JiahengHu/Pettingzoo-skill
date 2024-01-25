@@ -90,10 +90,22 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	def __init__(self, env, landmark_id, N):
 		self._env = env
 		self.N = N
-		self.cycle_step = 50
 		self.distance_threshold = 0.6
+		# We want to have binary indicator for each episode / each timestep
+		# close or far from the landmark
+		self.landmark_id = landmark_id
 
-		dict_act_space = env.action_spaces
+		self.initialize_parameters()
+		self.initialize_action_space()
+		self.initialize_state_space()
+
+	def initialize_parameters(self):
+		self.cycle_step = 50
+		self.agent_name = self._env.possible_agents[0]
+		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
+
+	def initialize_action_space(self):
+		dict_act_space = self._env.action_spaces
 		low_action_range = []
 		high_action_range = []
 
@@ -107,11 +119,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		self.action_space = spaces.Box(
 			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
 
-		# TODO: change state space
-		# We want to have binary indicator for each episode / each timestep
-		# close or far from the landmark
-		self.landmark_id = landmark_id
-
+	def initialize_state_space(self):
 		state_dim = self.N * 8 + 1 # We have an additional indicator variable, plus time counter
 		self.observation_space = spaces.Box(
 			low=-np.float32(np.inf),
@@ -119,9 +127,6 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 			shape=(state_dim,),
 			dtype=np.float32,
 		)
-
-		self.agent_name = self._env.possible_agents[0]
-		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
 
 	def step(self, action):
 		self.step_count += 1.0
@@ -134,8 +139,21 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		done = terminations[self.agent_name] or truncations[self.agent_name]
 
 		state = self._env.state()
-		dist_list = state[:self.N]
+		reward = self.get_reward(state)
 
+		if self.step_count % self.cycle_step == 0:
+			self.ds_state_update()
+
+		return state, reward, done, infos
+
+	def reset(self, seed=None):
+		self._env.reset(seed)
+		self.step_count = 0.0
+		self.downstream_reset()
+		return self._env.state()
+
+	def get_reward(self, state):
+		dist_list = state[:self.N]
 		reward = 0
 		for ids in self.landmark_id:
 			binary = self.binary_indicator[ids]
@@ -143,21 +161,88 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 			if binary == 0:
 				if dist < self.distance_threshold:
 					reward += 1
+				else:
+					reward -= 1
 			else:
 				if dist > self.distance_threshold:
 					reward += 1
+				else:
+					reward -= 1
+		return reward
 
-		if self.step_count % self.cycle_step == 0:
-			self.binary_indicator = np.random.randint(2, size=10)
-
-		return state, reward, done, infos
-
-	def reset(self, seed=None):
-		self._env.reset(seed)
-		self.step_count = 0.0
+	def ds_state_update(self):
 		self.binary_indicator = np.random.randint(2, size=10)
-		return self._env.state()
+
+	def downstream_reset(self):
+		self.binary_indicator = np.random.randint(2, size=10)
 
 	# Defines additional states needed for the upper policy
 	def get_additional_states(self):
 		return np.concatenate([self.binary_indicator, [self.step_count / self.cycle_step]])
+
+
+# Skip agent 5 and 8
+class SequentialDSWrapper(DownstreamCentralizedWrapper):
+	def __init__(self, env, N, agent_sequence=[0, 1, 2]):
+		self._env = env
+		self.N = N
+		self.distance_threshold = 0.6
+
+		self.agent_sequence = agent_sequence
+
+		self.initialize_parameters()
+		self.initialize_action_space()
+		self.initialize_state_space()
+
+	def initialize_state_space(self):
+		state_dim = self.N * 8 + 1
+		self.observation_space = spaces.Box(
+			low=-np.float32(np.inf),
+			high=+np.float32(np.inf),
+			shape=(state_dim,),
+			dtype=np.float32,
+		)
+
+	def get_reward(self, state):
+		if self.progress_idx == len(self.agent_sequence):
+			reward = 10
+		else:
+			dist_list = state[:self.N]
+			reward = 0
+			for idx in range(self.N):
+				if idx in [5, 8]:
+					continue
+				binary = self.curren_idx[idx]
+				dist = dist_list[idx]
+				if binary == 0:
+					if dist > self.distance_threshold:
+						reward += 0
+					else:
+						reward -= 1
+				else:
+					if dist < self.distance_threshold:
+						reward += 0
+						self.charge_counter += 1
+					else:
+						reward -= 1
+		return reward
+
+	def ds_state_update(self):
+		if self.progress_idx < len(self.agent_sequence) and self.charge_counter > 30:
+			# switch to next target
+			self.progress_idx += 1
+			self.charge_counter = 0
+			self.curren_idx = np.zeros(self.N)
+			if self.progress_idx < len(self.agent_sequence):
+				self.curren_idx[self.agent_sequence[self.progress_idx]] = 1
+
+
+	def downstream_reset(self):
+		self.progress_idx = 0
+		self.charge_counter = 0
+		self.curren_idx = np.zeros(self.N)
+		self.curren_idx[self.agent_sequence[self.progress_idx]] = 1
+
+	# Defines additional states needed for the upper policy
+	def get_additional_states(self):
+		return np.concatenate([self.curren_idx, [self.step_count / self.cycle_step]])
