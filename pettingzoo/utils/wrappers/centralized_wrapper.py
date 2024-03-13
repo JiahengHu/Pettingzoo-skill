@@ -11,35 +11,68 @@ import gymnasium
 import torch
 
 class CentralizedWrapper(gym.Env):
-	def __init__(self, env):
+	def __init__(self, env, simplify_action_space=True):
 		self._env = env
-
-		dict_act_space = env.action_spaces
-		low_action_range = []
-		high_action_range = []
-
-		for val in dict_act_space.values():
-			assert isinstance(val, gymnasium.spaces.Box)
-			low_action_range.append(val.low)
-			high_action_range.append(val.high)
-		low_action_range = np.concatenate(low_action_range)
-		high_action_range = np.concatenate(high_action_range)
-
-		self.action_space = spaces.Box(
-			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
+		self.simplify_action_space = simplify_action_space
+		self.initialize_action_space()
 		self.observation_space = env.state_space
 		self.agent_name = self._env.possible_agents[0]
 		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
+
+	def initialize_action_space(self):
+		dict_act_space = self._env.action_spaces
+		low_action_range = []
+		high_action_range = []
+
+		if self.simplify_action_space:
+			for val in dict_act_space.values():
+				# Just 2D action space which controls the x and y velocity
+				assert isinstance(val, gymnasium.spaces.Box)
+				low_action_range.append(np.ones(2) * -1)
+				high_action_range.append(np.ones(2))
+			low_action_range = np.concatenate(low_action_range)
+			high_action_range = np.concatenate(high_action_range)
+		else:
+			for val in dict_act_space.values():
+				assert isinstance(val, gymnasium.spaces.Box)
+				low_action_range.append(val.low)
+				high_action_range.append(val.high)
+			low_action_range = np.concatenate(low_action_range)
+			high_action_range = np.concatenate(high_action_range)
+
+		self.action_space = spaces.Box(
+			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
 
 	def reset(self, seed=None):
 		observations, infos = self._env.reset(seed)
 		return self._env.state()
 
+	def action_transform(self, action):
+		if self.simplify_action_space:
+			tf_action = np.zeros(5, dtype=np.float32)
+			tf_action[0] = 0.5
+			if action[0] > 0:
+				tf_action[1] = action[0]
+				tf_action[2] = 0
+			else:
+				tf_action[1] = 0
+				tf_action[2] = -action[0]
+
+			if action[1] > 0:
+				tf_action[3] = action[1]
+				tf_action[4] = 0
+			else:
+				tf_action[3] = 0
+				tf_action[4] = -action[1]
+		else:
+			tf_action = action
+		return tf_action
+
 	def step(self, action):
 		# Loop through each agent and assign action
 		# We assume each agent has the same action space
 		actions = np.split(action, len(self._env.agents))
-		actions = {agent:act  for agent, act in zip(self._env.agents, actions)}
+		actions = {agent:self.action_transform(act)  for agent, act in zip(self._env.agents, actions)}
 		observations, rewards, terminations, truncations, infos = self._env.step(actions)
 
 		done = terminations[self.agent_name] or truncations[self.agent_name]
@@ -87,7 +120,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	Centralized wrapper that is responsible for downstream tasks
 	Takes in a list of landmark ids that are used to generate reward
 	"""
-	def __init__(self, env, landmark_id, N, factorize):
+	def __init__(self, env, landmark_id, N, factorize, simplify_action_space=True):
 		self._env = env
 		self.N = N
 		self.factorize = factorize
@@ -95,6 +128,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		# We want to have binary indicator for each episode / each timestep
 		# close or far from the landmark
 		self.landmark_id = landmark_id
+		self.simplify_action_space = simplify_action_space
 
 		self.initialize_parameters()
 		self.initialize_action_space()
@@ -105,20 +139,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		self.agent_name = self._env.possible_agents[0]
 		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
 
-	def initialize_action_space(self):
-		dict_act_space = self._env.action_spaces
-		low_action_range = []
-		high_action_range = []
 
-		for val in dict_act_space.values():
-			assert isinstance(val, gymnasium.spaces.Box)
-			low_action_range.append(val.low)
-			high_action_range.append(val.high)
-		low_action_range = np.concatenate(low_action_range)
-		high_action_range = np.concatenate(high_action_range)
-
-		self.action_space = spaces.Box(
-			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
 
 	def initialize_state_space(self):
 		state_dim = self.N * 8 + 1 # We have an additional indicator variable, plus time counter
@@ -134,7 +155,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		# Loop through each agent and assign action
 		# We assume each agent has the same action space
 		actions = np.split(action, len(self._env.agents))
-		actions = {agent:act  for agent, act in zip(self._env.agents, actions)}
+		actions = {agent:self.action_transform(act)  for agent, act in zip(self._env.agents, actions)}
 		observations, rewards, terminations, truncations, infos = self._env.step(actions)
 
 		done = terminations[self.agent_name] or truncations[self.agent_name]
