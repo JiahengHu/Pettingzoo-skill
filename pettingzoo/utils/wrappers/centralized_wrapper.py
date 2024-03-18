@@ -88,7 +88,7 @@ class CentralizedWrapper(gym.Env):
 		assert agent.domain == "particle"
 		N = cfg.env.particle.N
 		# So we want to test: for each vector, what are the predicted skill
-		vectors = np.linspace(0.05, 1.8, 11)
+		vectors = np.linspace(0.05, 2.00, 16)
 		possible_vectors = [[v] for v in vectors]
 		prediction = []
 		for vec in possible_vectors:
@@ -108,7 +108,11 @@ class CentralizedWrapper(gym.Env):
 		if anti:
 			apd += "_anti"
 
-		text = np.array2string(np.array(prediction), precision=2, suppress_small=True)
+		import sys
+		np.set_printoptions(threshold=sys.maxsize)
+
+		# Save in the right format (group by subskill)
+		text = np.array2string(np.array(prediction).swapaxes(0, 1), precision=2, suppress_small=True)
 		with open(f"pred{apd}.txt", "w") as text_file:
 			text_file.write(text)
 
