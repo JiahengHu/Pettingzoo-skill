@@ -123,6 +123,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	"""
 	Centralized wrapper that is responsible for downstream tasks
 	Takes in a list of landmark ids that are used to generate reward
+	Defines the food poison environment
 	"""
 	def __init__(self, env, landmark_id, N, factorize, simplify_action_space=True):
 		self._env = env
@@ -142,8 +143,6 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		self.cycle_step = 50
 		self.agent_name = self._env.possible_agents[0]
 		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
-
-
 
 	def initialize_state_space(self):
 		state_dim = self.N * 8 + 1 # We have an additional indicator variable, plus time counter
@@ -211,17 +210,22 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 
 # Skip agent 5 and 8
 class SequentialDSWrapper(DownstreamCentralizedWrapper):
-	def __init__(self, env, N, agent_sequence=[0, 1, 2]):
+	"""
+	Defines the sequential interaction environment
+	"""
+	def __init__(self, env, N, agent_sequence=[0, 1, 2], simplify_action_space=True):
 		self._env = env
 		self.N = N
 		self.distance_threshold = 0.6
 
 		self.agent_sequence = agent_sequence
+		self.simplify_action_space = simplify_action_space
 
 		self.initialize_parameters()
 		self.initialize_action_space()
 		self.initialize_state_space()
 
+	# This happens to be the same as the previous wrapper, but it is not always the case
 	def initialize_state_space(self):
 		state_dim = self.N * 8 + 1
 		self.observation_space = spaces.Box(
