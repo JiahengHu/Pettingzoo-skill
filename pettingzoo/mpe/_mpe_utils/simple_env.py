@@ -48,8 +48,10 @@ class SimpleEnv(AECEnv):
         self.render_mode = render_mode
         pygame.init()
         self.viewer = None
-        self.width = 700
-        self.height = 700
+        # TODO: change for lower computational cost
+        res = int(scenario.agent_size / 0.05 * 700) # 64 # 700
+        self.width = res
+        self.height = res
         self.screen = pygame.Surface([self.width, self.height])
         self.max_size = 1
         self.game_font = pygame.freetype.Font(
@@ -290,7 +292,9 @@ class SimpleEnv(AECEnv):
 
         # update bounds to center around agent
         all_poses = [entity.state.p_pos for entity in self.world.entities]
-        cam_range = np.max(np.abs(np.array(all_poses)))
+        # cam_range = np.max(np.abs(np.array(all_poses)))
+        # TODO: This is just for the simple particle environment
+        cam_range = 1.0
 
         # update geometry and text positions
         text_line = 0
