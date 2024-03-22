@@ -22,12 +22,17 @@ if collect_obs:
         img = parallel_env.render()
         obss.append(observations)
         imgs.append(img)
-        print(i / num_data * 100, '%' )
-    obss = np.array(obss)
-    imgs = np.array(imgs)
 
-    obs = np.save('obs.npy', obss)
-    img = np.save('img.npy', imgs)
+        # N * 7: np.concatenate([diayn_states] + agent_stats + entity_pos); agent stats: speed + pos
+
+        if i % 10000 == 0:
+            print(i / num_data * 100, '%')
+            obss = np.array(obss)
+            imgs = np.array(imgs)
+            np.save(f'data/obs{i}.npy', obss)
+            np.save(f'data/img{i}.npy', imgs)
+            obss = []
+            imgs = []
 
 else:
     observations = parallel_env.reset()
@@ -37,7 +42,6 @@ else:
         counter += 1
         actions = parallel_env.action_space.sample()
         observations, rewards, dones, infos = parallel_env.step(actions)
-        # print(observations) # N * 7: np.concatenate([diayn_states] + agent_stats + entity_pos); agent stats: speed + pos
         img = parallel_env.render()
 
 parallel_env.close()

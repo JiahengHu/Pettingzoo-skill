@@ -84,7 +84,7 @@ class Scenario(BaseScenario):
         num_agents = N
         num_landmarks = N
         world.collaborative = True
-        self.agent_size = 0.01 # 0.03
+        self.agent_size = 0.00916  # 0.03
         self.landmark_size = self.agent_size / 3 * 5
 
         # add agents

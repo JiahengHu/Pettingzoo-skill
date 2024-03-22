@@ -49,7 +49,7 @@ class SimpleEnv(AECEnv):
         pygame.init()
         self.viewer = None
         # TODO: change for lower computational cost
-        res = int(scenario.agent_size / 0.05 * 700) # 64 # 700
+        res = int(scenario.agent_size / 0.05 * 350) # 64 # 700
         self.width = res
         self.height = res
         self.screen = pygame.Surface([self.width, self.height])
