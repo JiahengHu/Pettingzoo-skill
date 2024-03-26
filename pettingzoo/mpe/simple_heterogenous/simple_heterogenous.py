@@ -11,6 +11,7 @@ from pettingzoo.mpe._mpe_utils.scenario import BaseScenario
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv, make_env
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 from gym import spaces
+from matplotlib import colormaps
 
 
 class raw_env(SimpleEnv, EzPickle):
@@ -106,25 +107,27 @@ class Scenario(BaseScenario):
         return world
 
     def reset_world(self, world, np_random):
-        colors = np.array([
-            [1, 0, 0],  # Red
-            [0, 1, 0],  # Green
-            [0, 0, 1],  # Blue
-            [1, 1, 0],  # Yellow
-            [1, 0, 1],  # Magenta
-            [0, 1, 1],  # Cyan
-            [0.5, 0.5, 0],  # Olive
-            [0, 0.5, 0.5],  # Teal
-            [0.5, 0, 0.5],  # Purple
-            [0.5, 0.5, 0.5]  # Gray
-        ])
+        # colors = np.array([
+        #     [1, 0, 0],  # Red
+        #     [0, 1, 0],  # Green
+        #     [0, 0, 1],  # Blue
+        #     [1, 1, 0],  # Yellow
+        #     [1, 0, 1],  # Magenta
+        #     [0, 1, 1],  # Cyan
+        #     [0.5, 0.5, 0],  # Olive
+        #     [0, 0.5, 0.5],  # Teal
+        #     [0.5, 0, 0.5],  # Purple
+        #     [0.5, 0.5, 0.5]  # Gray
+        # ])
+        colors = np.array(colormaps['tab20'].colors)
+
         for i, agent in enumerate(world.agents):
             # black, gray, white, red, blue, green, yellow, orange, brown, purple, and pink
             agent.color = colors[i] # np.array([1, 0, 0]) * i / len(world.landmarks)
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
             # landmark.color = np.array([0.25, 0.25, 0.25])
-            landmark.color = colors[i]  # np.array([0, 0, 1]) * i / len(world.landmarks)
+            landmark.color = colors[i+10]  # np.array([0, 0, 1]) * i / len(world.landmarks)
 
         # set random initial states
         for agent in world.agents:

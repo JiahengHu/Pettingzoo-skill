@@ -23,6 +23,12 @@ if collect_obs:
         obss.append(observations)
         imgs.append(img)
 
+        vis = False
+        if vis:
+            import ipdb; ipdb.set_trace()
+            import matplotlib.pyplot as plt
+            plt.imshow(img)
+            plt.show()
         # N * 7: np.concatenate([diayn_states] + agent_stats + entity_pos); agent stats: speed + pos
 
         if i % 10000 == 0:
