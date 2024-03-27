@@ -12,7 +12,7 @@ from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv, make_env
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 from gym import spaces
 from matplotlib import colormaps
-
+import torch
 
 class raw_env(SimpleEnv, EzPickle):
     def __init__(
@@ -22,6 +22,7 @@ class raw_env(SimpleEnv, EzPickle):
         max_cycles=25,
         continuous_actions=False,
         render_mode=None,
+        img_encoder=None,
     ):
         EzPickle.__init__(
             self,
@@ -47,19 +48,43 @@ class raw_env(SimpleEnv, EzPickle):
         )
         self.metadata["name"] = "simple_heterogenous_v3"
 
-        state_dim = N * 7
-        self.state_space = spaces.Box(
-            low=-np.float32(np.inf),
-            high=+np.float32(np.inf),
-            shape=(state_dim,),
-            dtype=np.float32,
-        )
+        self.img_encoder = img_encoder
+        if img_encoder is None:
+            state_dim = N * 7
+            self.state_space = spaces.Box(
+                low=-np.float32(np.inf),
+                high=+np.float32(np.inf),
+                shape=(state_dim,),
+                dtype=np.float32,
+            )
+            self.use_img = False
+        else:
+            state_dim = N * 5
+            self.state_space = spaces.Box(
+                low=-np.float32(np.inf),
+                high=+np.float32(np.inf),
+                shape=(state_dim,),
+                dtype=np.float32,
+            )
+            self.use_img = True
 
     def observe(self, agent):
         return None
 
     def state(self):
-        return self.scenario.get_state(self.world).astype(np.float32)
+        if self.use_img:
+            img = self.render()
+
+            with torch.no_grad():
+                # Format and process the img using the given encoder
+                img = img.transpose([2, 0, 1])
+                img = torch.tensor(img, dtype=torch.float32, device=self.img_encoder.load_device).unsqueeze(0)
+                out_dict = self.img_encoder(img)
+                rel_dist, pos, _, _ = out_dict["regression"]
+                state = torch.cat([rel_dist.flatten(), pos.flatten()]).cpu().numpy().astype(np.float32)
+        else:
+            state = self.scenario.get_state(self.world).astype(np.float32)
+        return state
 
 
 env = make_env(raw_env)

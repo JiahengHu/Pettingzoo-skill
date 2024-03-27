@@ -10,6 +10,7 @@ import numpy as np
 import gymnasium
 import torch
 
+
 class CentralizedWrapper(gym.Env):
 	def __init__(self, env, simplify_action_space=True):
 		self._env = env
@@ -44,7 +45,7 @@ class CentralizedWrapper(gym.Env):
 			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
 
 	def reset(self, seed=None):
-		observations, infos = self._env.reset(seed)
+		_, _ = self._env.reset(seed)
 		return self._env.state()
 
 	def action_transform(self, action):
@@ -73,7 +74,7 @@ class CentralizedWrapper(gym.Env):
 		# We assume each agent has the same action space
 		actions = np.split(action, len(self._env.agents))
 		actions = {agent:self.action_transform(act)  for agent, act in zip(self._env.agents, actions)}
-		observations, rewards, terminations, truncations, infos = self._env.step(actions)
+		_, rewards, terminations, truncations, infos = self._env.step(actions)
 
 		done = terminations[self.agent_name] or truncations[self.agent_name]
 		rewards = rewards[self.agent_name]
@@ -81,7 +82,6 @@ class CentralizedWrapper(gym.Env):
 
 	def render(self, mode='human'):
 		return self._env.render()
-
 
 	# THIS IS A HACK
 	def plot_prediction_net(self, agent, cfg, step=0, device="cuda", anti=False, SHOW=False):
@@ -145,7 +145,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
 
 	def initialize_state_space(self):
-		state_dim = self.N * 8 + 1 # We have an additional indicator variable, plus time counter
+		state_dim = self._env.state_space.shape[0] + self.N + 1 # We have an additional indicator variable, plus time counter
 		self.observation_space = spaces.Box(
 			low=-np.float32(np.inf),
 			high=+np.float32(np.inf),
@@ -159,7 +159,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		# We assume each agent has the same action space
 		actions = np.split(action, len(self._env.agents))
 		actions = {agent:self.action_transform(act)  for agent, act in zip(self._env.agents, actions)}
-		observations, rewards, terminations, truncations, infos = self._env.step(actions)
+		_, rewards, terminations, truncations, infos = self._env.step(actions)
 
 		done = terminations[self.agent_name] or truncations[self.agent_name]
 
@@ -227,7 +227,7 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 
 	# This happens to be the same as the previous wrapper, but it is not always the case
 	def initialize_state_space(self):
-		state_dim = self.N * 8 + 1
+		state_dim = self._env.state_space.shape[0] + self.N + 1
 		self.observation_space = spaces.Box(
 			low=-np.float32(np.inf),
 			high=+np.float32(np.inf),
