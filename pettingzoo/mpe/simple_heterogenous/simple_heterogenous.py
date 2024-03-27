@@ -13,6 +13,7 @@ from pettingzoo.utils.conversions import parallel_wrapper_fn
 from gym import spaces
 from matplotlib import colormaps
 import torch
+from slot_attention.data import MPTransforms
 
 class raw_env(SimpleEnv, EzPickle):
     def __init__(
@@ -67,6 +68,7 @@ class raw_env(SimpleEnv, EzPickle):
                 dtype=np.float32,
             )
             self.use_img = True
+            self.img_transforms = MPTransforms([64,64])
 
     def observe(self, agent):
         return None
@@ -74,16 +76,18 @@ class raw_env(SimpleEnv, EzPickle):
     def state(self):
         if self.use_img:
             img = self.render()
-
             with torch.no_grad():
                 # Format and process the img using the given encoder
-                img = img.transpose([2, 0, 1])
-                img = torch.tensor(img, dtype=torch.float32, device=self.img_encoder.load_device).unsqueeze(0)
+                img = self.img_transforms(img)
+                img = img.to(device=self.img_encoder.load_device).unsqueeze(0)
                 out_dict = self.img_encoder(img)
                 rel_dist, pos, _, _ = out_dict["regression"]
                 state = torch.cat([rel_dist.flatten(), pos.flatten()]).cpu().numpy().astype(np.float32)
         else:
             state = self.scenario.get_state(self.world).astype(np.float32)
+        # TODO: for examining the accuracy of the img encoder
+        # gt_state = self.scenario.get_state(self.world).astype(np.float32)
+        # import ipdb; ipdb.set_trace()
         return state
 
 
