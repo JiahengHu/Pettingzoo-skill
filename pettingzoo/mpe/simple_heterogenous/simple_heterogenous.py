@@ -87,6 +87,8 @@ class raw_env(SimpleEnv, EzPickle):
             state = self.scenario.get_state(self.world).astype(np.float32)
         # TODO: for examining the accuracy of the img encoder
         # gt_state = self.scenario.get_state(self.world).astype(np.float32)
+        # print(state[:10])
+        # print(gt_state[:10])
         # import ipdb; ipdb.set_trace()
         return state
 

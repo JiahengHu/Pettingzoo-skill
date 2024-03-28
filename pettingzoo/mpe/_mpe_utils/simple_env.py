@@ -298,7 +298,7 @@ class SimpleEnv(AECEnv):
 
         # update geometry and text positions
         text_line = 0
-        for e, entity in enumerate(self.world.entities):
+        for e, entity in enumerate(self.world.landmarks + self.world.agents):
             # geometry
             x, y = entity.state.p_pos
             y *= (

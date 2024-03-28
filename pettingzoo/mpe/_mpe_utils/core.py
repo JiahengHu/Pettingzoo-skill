@@ -104,7 +104,7 @@ class World:  # multi-agent world
     @property
     def entities(self):
         # Reversed
-        return self.landmarks + self.agents
+        return self.agents + self.landmarks
 
     # return all agents controllable by external policies
     @property
