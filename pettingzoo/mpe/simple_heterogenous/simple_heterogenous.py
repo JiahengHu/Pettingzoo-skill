@@ -85,7 +85,7 @@ class raw_env(SimpleEnv, EzPickle):
                 rel_dist, pos, _, _ = out_dict["regression"]
                 state = torch.cat([rel_dist.flatten(), pos.flatten()]).cpu().numpy().astype(np.float32)
 
-            use_gt = True
+            use_gt = False
             if use_gt:
                 candidate_idx = range(70)
                 idx = []
@@ -97,15 +97,9 @@ class raw_env(SimpleEnv, EzPickle):
         else:
             state = self.scenario.get_state(self.world).astype(np.float32)
 
-            mask_out_velocity = True
+            mask_out_velocity = False
             if mask_out_velocity:
                 state[speed_idx] = 0
-        # TODO: for examining the accuracy of the img encoder
-        # Ok so this is actually not that accurate -> there can often be error
-        # gt_state = self.scenario.get_state(self.world).astype(np.float32)
-        # print(state[:10])
-        # print(gt_state[:10])
-        # import ipdb; ipdb.set_trace()
         return state
 
 
