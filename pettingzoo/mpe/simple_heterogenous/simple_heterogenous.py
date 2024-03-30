@@ -74,6 +74,7 @@ class raw_env(SimpleEnv, EzPickle):
         return None
 
     def state(self):
+        speed_idx = [10, 11, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31, 34, 35, 38, 39, 42, 43, 46, 47]
         if self.use_img:
             img = self.render()
             with torch.no_grad():
@@ -83,9 +84,24 @@ class raw_env(SimpleEnv, EzPickle):
                 out_dict = self.img_encoder(img)
                 rel_dist, pos, _, _ = out_dict["regression"]
                 state = torch.cat([rel_dist.flatten(), pos.flatten()]).cpu().numpy().astype(np.float32)
+
+            use_gt = True
+            if use_gt:
+                candidate_idx = range(70)
+                idx = []
+                for id in candidate_idx:
+                    if id not in speed_idx:
+                        idx.append(id)
+                state = self.scenario.get_state(self.world).astype(np.float32)[idx]
+
         else:
             state = self.scenario.get_state(self.world).astype(np.float32)
+
+            mask_out_velocity = True
+            if mask_out_velocity:
+                state[speed_idx] = 0
         # TODO: for examining the accuracy of the img encoder
+        # Ok so this is actually not that accurate -> there can often be error
         # gt_state = self.scenario.get_state(self.world).astype(np.float32)
         # print(state[:10])
         # print(gt_state[:10])
