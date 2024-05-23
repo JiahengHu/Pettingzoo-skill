@@ -235,6 +235,7 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 			dtype=np.float32,
 		)
 
+	# TODO: what is wrong with this task?
 	def get_reward(self, state):
 		if self.progress_idx == len(self.agent_sequence):
 			reward = 10
@@ -242,25 +243,26 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 			dist_list = state[:self.N]
 			reward = 0
 			for idx in range(self.N):
-				if idx in [5, 8]:
-					continue
+				# if idx in [5, 8]:
+				# 	continue
 				binary = self.curren_idx[idx]
 				dist = dist_list[idx]
 				if binary == 0:
 					if dist > self.distance_threshold:
 						reward += 0
 					else:
-						reward -= 1
+						reward -= 0.1
 				else:
+					# Ok here is the problem -> after update
 					if dist < self.distance_threshold:
 						reward += 0
 						self.charge_counter += 1
 					else:
-						reward -= 1
+						reward -= 0.1
 		return reward
 
 	def ds_state_update(self):
-		if self.progress_idx < len(self.agent_sequence) and self.charge_counter > 30:
+		if self.progress_idx < len(self.agent_sequence) and self.charge_counter > 40:
 			# switch to next target
 			self.progress_idx += 1
 			self.charge_counter = 0
