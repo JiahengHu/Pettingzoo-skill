@@ -11,9 +11,8 @@ from pettingzoo.mpe._mpe_utils.scenario import BaseScenario
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv, make_env
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 from gym import spaces
-from matplotlib import colormaps
 import torch
-from slot_attention.data import MPTransforms
+from matplotlib import colormaps
 
 class raw_env(SimpleEnv, EzPickle):
     def __init__(
@@ -68,6 +67,7 @@ class raw_env(SimpleEnv, EzPickle):
                 dtype=np.float32,
             )
             self.use_img = True
+            from slot_attention.data import MPTransforms
             self.img_transforms = MPTransforms([64,64])
 
     def observe(self, agent):
