@@ -292,8 +292,6 @@ class SimpleEnv(AECEnv):
 
         # update bounds to center around agent
         all_poses = [entity.state.p_pos for entity in self.world.entities]
-        # cam_range = np.max(np.abs(np.array(all_poses)))
-        # TODO: This is just for the simple particle environment
         cam_range = 1.0
 
         # update geometry and text positions

@@ -208,7 +208,6 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		return np.concatenate([self.binary_indicator, [self.step_count / self.cycle_step]])
 
 
-# Skip agent 5 and 8
 class SequentialDSWrapper(DownstreamCentralizedWrapper):
 	"""
 	Defines the sequential interaction environment
@@ -235,7 +234,6 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 			dtype=np.float32,
 		)
 
-	# TODO: what is wrong with this task?
 	def get_reward(self, state):
 		if self.progress_idx == len(self.agent_sequence):
 			reward = 10

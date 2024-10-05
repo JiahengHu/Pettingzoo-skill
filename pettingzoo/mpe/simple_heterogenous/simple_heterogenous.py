@@ -176,7 +176,6 @@ class Scenario(BaseScenario):
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
 
-        # TODO: What if we want to fix the initial state?
         for i, landmark in enumerate(world.landmarks):
             landmark.state.p_pos = np_random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
@@ -209,23 +208,11 @@ class Scenario(BaseScenario):
         return True if dist < dist_min else False
 
     def reward(self, agent, world):
-        # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
-        # In this env, we do not make use of local reward
-
         rew = 0
-        # if agent.collide:
-        #     for a in world.agents:
-        #         rew -= 1.0 * (self.is_collision(a, agent) and a != agent)
         return rew
 
     def global_reward(self, world):
         rew = 0
-        # for idx, lm in enumerate(world.landmarks):
-        #     dists = [
-        #         np.sqrt(np.sum(np.square(a.state.p_pos - lm.state.p_pos)))
-        #         for a in world.agents
-        #     ]
-        #     rew -= min(dists)
         return rew
 
     def get_state(self, world):
@@ -234,8 +221,6 @@ class Scenario(BaseScenario):
         for agt in world.agents:
             agent_stats.append(agt.state.p_vel)
             agent_stats.append(agt.state.p_pos)
-            # vel.append(agt.state.p_vel)
-            # pos.append(agt.state.p_pos)
 
         # get positions of all entities in this agent's reference frame
         entity_pos = []
@@ -243,12 +228,9 @@ class Scenario(BaseScenario):
             entity_pos.append(entity.state.p_pos)
 
         diayn_states = []
-        thresholds = [0.3, 0.6]
-        # upper_threshold = 0.7
         upper_threshold = np.inf
         for idx, lm in enumerate(world.landmarks):
             other_idx = (idx + 1) % len(world.landmarks)
-            # ag_idx_list = [idx, other_idx] # We can change the association here
             ag_idx_list = [idx]
 
             dists = [
@@ -259,14 +241,6 @@ class Scenario(BaseScenario):
             # Cap the distance
             dists += [upper_threshold]
             m_dist = min(dists)
-
-            # # TODO: These are if we use discrete representations
-            # if m_dist < thresholds[0]:
-            #     diayn_states.append([1, 0, 0])
-            # elif m_dist < thresholds[1]:
-            #     diayn_states.append([0, 1, 0])
-            # else:
-            #     diayn_states.append([0, 0, 1])
 
             diayn_states.append(m_dist)
 
