@@ -128,7 +128,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	def __init__(self, env, landmark_id, N, factorize, simplify_action_space=True):
 		self._env = env
 		self.N = N
-		self.factorize = factorize
+		self.factored = factorize
 		self.distance_threshold = 0.6
 		# We want to have binary indicator for each episode / each timestep
 		# close or far from the landmark
@@ -193,7 +193,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 					reward[idx] += 1
 				else:
 					reward[idx] -= 1
-		if not self.factorize:
+		if not self.factored:
 			reward = np.sum(reward)
 		return reward
 
@@ -203,8 +203,11 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	def downstream_reset(self):
 		self.binary_indicator = np.random.randint(2, size=10)
 
+	def get_end_skill_reward(self, obs=None, meta_action=None):
+		return 0
+
 	# Defines additional states needed for the upper policy
-	def get_additional_states(self):
+	def get_additional_states(self, obs=None):
 		return np.concatenate([self.binary_indicator, [self.step_count / self.cycle_step]])
 
 
@@ -275,6 +278,9 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 		self.curren_idx = np.zeros(self.N)
 		self.curren_idx[self.agent_sequence[self.progress_idx]] = 1
 
+	def get_end_skill_reward(self, obs=None, meta_action=None):
+		return 0
+
 	# Defines additional states needed for the upper policy
-	def get_additional_states(self):
+	def get_additional_states(self, obs=None):
 		return np.concatenate([self.curren_idx, [self.step_count / self.cycle_step]])
