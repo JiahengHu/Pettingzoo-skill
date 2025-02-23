@@ -4,8 +4,8 @@ Convert mpe to gym environment
 
 import dm_env
 from dm_env import specs
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 import gymnasium
 import torch
@@ -16,7 +16,12 @@ class CentralizedWrapper(gym.Env):
 		self._env = env
 		self.simplify_action_space = simplify_action_space
 		self.initialize_action_space()
-		self.observation_space = env.state_space
+		self.observation_space = spaces.Box(
+			low=0.0,
+			high=255.0,
+			shape=np.array([224,224,3]),
+			dtype=np.uint8,
+		)
 		self.agent_name = self._env.possible_agents[0]
 		assert self._env.unwrapped.local_ratio == 0, "local_ratio must be 0"
 
@@ -34,6 +39,7 @@ class CentralizedWrapper(gym.Env):
 			low_action_range = np.concatenate(low_action_range)
 			high_action_range = np.concatenate(high_action_range)
 		else:
+			# TODO: how can we make this work with discrete action space?
 			for val in dict_act_space.values():
 				assert isinstance(val, gymnasium.spaces.Box)
 				low_action_range.append(val.low)
@@ -44,9 +50,9 @@ class CentralizedWrapper(gym.Env):
 		self.action_space = spaces.Box(
 			low=low_action_range, high=high_action_range, shape=low_action_range.shape, dtype=np.float32)
 
-	def reset(self, seed=None):
+	def reset(self, seed=None, **kwargs):
 		_, _ = self._env.reset(seed)
-		return self._env.state()
+		return self._env.render(), {"state": self._env.state()}
 
 	def action_transform(self, action):
 		if self.simplify_action_space:
@@ -75,10 +81,15 @@ class CentralizedWrapper(gym.Env):
 		actions = np.split(action, len(self._env.agents))
 		actions = {agent:self.action_transform(act)  for agent, act in zip(self._env.agents, actions)}
 		_, rewards, terminations, truncations, infos = self._env.step(actions)
+		obs = self._env.render()
 
-		done = terminations[self.agent_name] or truncations[self.agent_name]
+		terminations = terminations[self.agent_name]
+		truncations = truncations[self.agent_name]
 		rewards = rewards[self.agent_name]
-		return self._env.state(), rewards, done, infos
+
+		infos["state"] = self._env.state()
+
+		return obs, rewards, terminations, truncations, infos
 
 	def render(self, mode='human'):
 		return self._env.render()
@@ -147,8 +158,8 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 	def initialize_state_space(self):
 		state_dim = self._env.state_space.shape[0] + self.N + 1 # We have an additional indicator variable, plus time counter
 		self.observation_space = spaces.Box(
-			low=-np.float32(np.inf),
-			high=+np.float32(np.inf),
+			low=-1.0,
+			high=+1.0,
 			shape=(state_dim,),
 			dtype=np.float32,
 		)

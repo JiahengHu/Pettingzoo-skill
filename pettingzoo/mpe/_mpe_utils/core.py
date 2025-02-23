@@ -121,14 +121,19 @@ class World:  # multi-agent world
         # set actions for scripted agents
         for agent in self.scripted_agents:
             agent.action = agent.action_callback(agent, self)
-        # gather forces applied to entities
-        p_force = [None] * len(self.entities)
-        # apply agent physical controls
-        p_force = self.apply_action_force(p_force)
-        # apply environment forces
-        p_force = self.apply_environment_force(p_force)
-        # integrate physical state
-        self.integrate_state(p_force)
+
+        use_vel_control = True
+        if use_vel_control:
+            self.integrate_state_vel_control()
+        else:
+            # gather forces applied to entities
+            p_force = [None] * len(self.entities)
+            # apply agent physical controls
+            p_force = self.apply_action_force(p_force)
+            # apply environment forces
+            p_force = self.apply_environment_force(p_force)
+            # integrate physical state
+            self.integrate_state(p_force)
         # update agent state
         for agent in self.agents:
             self.update_agent_state(agent)
@@ -163,6 +168,12 @@ class World:  # multi-agent world
                         p_force[b] = 0.0
                     p_force[b] = f_b + p_force[b]
         return p_force
+
+    def integrate_state_vel_control(self):
+        for i, entity in enumerate(self.entities):
+            if not entity.movable:
+                continue
+            entity.state.p_pos += entity.action.vel * self.dt
 
     # integrate physical state
     def integrate_state(self, p_force):

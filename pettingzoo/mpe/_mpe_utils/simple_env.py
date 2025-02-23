@@ -49,7 +49,7 @@ class SimpleEnv(AECEnv):
         pygame.init()
         self.viewer = None
         # TODO: change for lower computational cost
-        res = int(scenario.agent_size / 0.05 * 350) # 64 # 700
+        res = 224 # int(scenario.agent_size / 0.05 * 350) # 64 # 700
         self.width = res
         self.height = res
         self.screen = pygame.Surface([self.width, self.height])
@@ -219,12 +219,17 @@ class SimpleEnv(AECEnv):
                     agent.action.u[1] = -1.0
                 if action[0] == 4:
                     agent.action.u[1] = +1.0
-            sensitivity = 5.0
-            if agent.accel is not None:
-                sensitivity = agent.accel
-            agent.action.u *= sensitivity
+
+            # We directly convert action to velocity
+            agent.action.vel = np.copy(agent.action.u)
+            # sensitivity = 5.0
+            # if agent.accel is not None:
+            #     sensitivity = agent.accel
+            # agent.action.u *= sensitivity
+
             action = action[1:]
         if not agent.silent:
+            raise NotImplementedError # We do not support communication
             # communication action
             if self.continuous_actions:
                 agent.action.c = action[0]

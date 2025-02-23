@@ -50,7 +50,7 @@ class raw_env(SimpleEnv, EzPickle):
 
         self.img_encoder = img_encoder
         if img_encoder is None:
-            state_dim = N * 7
+            state_dim = N * 2
             self.state_space = spaces.Box(
                 low=-np.float32(np.inf),
                 high=+np.float32(np.inf),
@@ -80,6 +80,7 @@ class raw_env(SimpleEnv, EzPickle):
             with torch.no_grad():
                 # Format and process the img using the given encoder
                 img = self.img_transforms(img)
+                import ipdb; ipdb.set_trace()
                 img = img.to(device=self.img_encoder.load_device).unsqueeze(0)
                 out_dict = self.img_encoder(img)
                 rel_dist, pos, _, _ = out_dict["regression"]
@@ -124,10 +125,13 @@ class Scenario(BaseScenario):
         # set any world properties first
         world.dim_c = 2
         num_agents = N
-        num_landmarks = N
+        num_landmarks = 0 # We do not need landmark
         world.collaborative = True
-        self.agent_size = 0.00916  # 0.03
+        self.agent_size = 0.05 # 0.00916  # 0.03
         self.landmark_size = self.agent_size / 3 * 5
+
+        # Where to change the resolution of the canvas?
+
 
         # add agents
         world.agents = [Agent() for i in range(num_agents)]
@@ -219,7 +223,8 @@ class Scenario(BaseScenario):
         agent_stats = []
 
         for agt in world.agents:
-            agent_stats.append(agt.state.p_vel)
+            # We don't need the velocity anymore
+            # agent_stats.append(agt.state.p_vel)
             agent_stats.append(agt.state.p_pos)
 
         # get positions of all entities in this agent's reference frame
