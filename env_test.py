@@ -4,13 +4,21 @@ from pettingzoo.utils.wrappers.centralized_wrapper import CentralizedWrapper, Do
 import h5py
 import minari
 
+# environment seed is randomized
+
+
+collect_obs = True
+use_minari = True
+ep_length = 100 # 1000
+num_eps = 200
+
 def img_encoder(img):
     return np.zeros(50)
 
 parallel_env = simple_heterogenous_v3.parallel_env(
     N=10,
     render_mode='rgb_array', # 'human' or 'rgb_array'， rgb_array is just for getting obs
-    max_cycles=1000,
+    max_cycles=ep_length,
     continuous_actions=True,
     local_ratio=0,
     # img_encoder=img_encoder,
@@ -19,14 +27,12 @@ parallel_env = simple_heterogenous_v3.parallel_env(
 parallel_env = CentralizedWrapper(parallel_env)
 # pa2 = DownstreamCentralizedWrapper(parallel_env, [1], 10, False)
 
-collect_obs = True
-use_minari = True
 
 if use_minari:
     dataset = None
     from minari import DataCollector
     env = DataCollector(parallel_env)
-    for episode_id in range(1000):
+    for episode_id in range(num_eps):
         env.reset()
         done = False
         while not done:
@@ -38,7 +44,7 @@ if use_minari:
             # Update local Minari dataset every 10 episodes.
             # This works as a checkpoint to not lose the already collected data
             if dataset is None:
-                dataset = env.create_dataset("data/test-v0")
+                dataset = env.create_dataset("data/val-v0")
             else:
                 env.add_to_dataset(dataset)
 
