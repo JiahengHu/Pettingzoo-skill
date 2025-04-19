@@ -204,7 +204,7 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 		self.binary_indicator = np.random.randint(2, size=10)
 
 	def get_end_skill_reward(self, obs=None, meta_action=None):
-		return 0
+		return [0]
 
 	# Defines additional states needed for the upper policy
 	def get_additional_states(self, obs=None):
@@ -279,7 +279,7 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 		self.curren_idx[self.agent_sequence[self.progress_idx]] = 1
 
 	def get_end_skill_reward(self, obs=None, meta_action=None):
-		return 0
+		return [0]
 
 	# Defines additional states needed for the upper policy
 	def get_additional_states(self, obs=None):
