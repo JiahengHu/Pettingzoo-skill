@@ -213,14 +213,19 @@ class DownstreamCentralizedWrapper(CentralizedWrapper):
 
 class SequentialDSWrapper(DownstreamCentralizedWrapper):
 	"""
-	Defines the sequential interaction environment
+	Sequential downstream task. If factored: reward shape (11,) — per-agent
+	terms out[0:10] and completion bonus out[10]. If not factored: same as
+	poison_l, return np.sum of that vector (scalar).
 	"""
-	def __init__(self, env, N, agent_sequence=[0, 1, 2], simplify_action_space=True):
+	def __init__(self, env, N, agent_sequence=None, factorize=False, simplify_action_space=True):
 		self._env = env
 		self.N = N
+		self.factored = factorize
 		self.distance_threshold = 0.6
 
-		self.agent_sequence = agent_sequence
+		if agent_sequence is None:
+			agent_sequence = [0, 1, 2]
+		self.agent_sequence = list(agent_sequence)
 		self.simplify_action_space = simplify_action_space
 
 		self.initialize_parameters()
@@ -238,29 +243,27 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 		)
 
 	def get_reward(self, state):
-		if self.progress_idx == len(self.agent_sequence):
-			reward = 10
+		out = np.zeros(11, dtype=np.float32)
+		n_stages = len(self.agent_sequence)
+		if self.progress_idx == n_stages:
+			out[10] = np.float32(10.0)
 		else:
-			dist_list = state[:self.N]
-			reward = 0
-			for idx in range(self.N):
-				# if idx in [5, 8]:
-				# 	continue
+			dist_list = state[: self.N]
+			for idx in range(min(self.N, 10)):
 				binary = self.curren_idx[idx]
 				dist = dist_list[idx]
 				if binary == 0:
-					if dist > self.distance_threshold:
-						reward += 0
-					else:
-						reward -= 0.1
+					if dist <= self.distance_threshold:
+						out[idx] -= np.float32(0.1)
 				else:
-					# Ok here is the problem -> after update
 					if dist < self.distance_threshold:
-						reward += 0
 						self.charge_counter += 1
 					else:
-						reward -= 0.1
-		return reward
+						out[idx] -= np.float32(0.1)
+
+		if not self.factored:
+			return np.sum(out)
+		return out
 
 	def ds_state_update(self):
 		if self.progress_idx < len(self.agent_sequence) and self.charge_counter > 40:
@@ -279,6 +282,9 @@ class SequentialDSWrapper(DownstreamCentralizedWrapper):
 		self.curren_idx[self.agent_sequence[self.progress_idx]] = 1
 
 	def get_end_skill_reward(self, obs=None, meta_action=None):
+		# Factored: channel 10 is completion in get_reward — no extra dim (cf. poison_l + [0]).
+		if self.factored:
+			return None
 		return [0]
 
 	# Defines additional states needed for the upper policy
